@@ -1,11 +1,14 @@
 @Library('cb-days@master') _
 pipeline {
   agent none
+  triggers {
+    eventTrigger jmespathQuery("event=='imagePush' && name=='node'")
+  }
   options { 
     buildDiscarder(logRotator(numToKeepStr: '2'))
     skipDefaultCheckout true
     preserveStashes(buildCount: 2)
-    //timeout(time: 30, unit: 'MINUTES')
+    timeout(time: 30, unit: 'MINUTES')
   }
   environment {
     repoOwner = "${repoOwner}"
@@ -34,6 +37,18 @@ pipeline {
         always {
           junit 'output/coverage/junit/junit.xml'
         }
+      }
+    }  
+    stage('Node Image Push') {
+      agent any
+      when {
+        allOf {
+          branch 'master'
+          triggeredBy 'EventTriggerCause' 
+        }
+      }
+      steps {
+        getImageBuildEventPayload()
       }
     }
     stage('Build and Push Image') {
